@@ -32,6 +32,10 @@ h_l = sum_i alpha_{i -> l} * s_i
 直观上，每个子层不再只能接收最近一层的残差流，而是可以选择性复用更早的 block 或 sublayer
 表示。
 
+<p align="center">
+  <img src="figures/overview_of_attention_residuals.png" width="700">
+</p>
+
 ## 模式
 
 - `baseline`: 标准 Qwen3 causal LM 结构，不使用 Attention Residuals。

@@ -42,6 +42,10 @@ depth-wise weight obtained through softmax. Intuitively, each sublayer no longer
 receives only the latest residual stream. Instead, it can selectively reuse earlier
 block-level or sublayer-level representations.
 
+<p align="center">
+  <img src="figures/overview_of_attention_residuals.png" width="700">
+</p>
+
 ## Modes
 
 - `baseline`: standard Qwen3 causal LM architecture without Attention Residuals.
