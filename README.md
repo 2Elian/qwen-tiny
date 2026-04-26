@@ -1,5 +1,10 @@
 # attention-residuals-reproduction
 
+![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)
+![LLM](https://img.shields.io/badge/Transformers-FFD21E?style=for-the-badge&logo=huggingface&logoColor=black)
+![Qwen3](https://img.shields.io/badge/Qwen3-1F6FEB?style=for-the-badge)
+![Attention Residuals](https://img.shields.io/badge/Attention%20Residuals-7C3AED?style=for-the-badge)
+
 [English](README.md) | [简体中文](README.zh-CN.md)
 
 This project is a reproduction experiment of the Attention Residuals method
