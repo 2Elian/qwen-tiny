@@ -17,3 +17,6 @@
 - transformers：用于简单的task训练
 - llamafactory-改进：基于llamafactory底层源码进行训练，而不是使用前端，最大限度的理解微调代码，便于后续小伙伴们在训推框架上作二次开发
 - verl and slime
+
+## 致谢
+- 感谢[gouzigouzi](https://github.com/gouzigouzi/attention-residuals-reproduction)提供的attention-residuals代码
