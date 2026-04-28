@@ -53,8 +53,8 @@ def parse_args():
     p.add_argument("--dataset_source", default="modelscope",
                    choices=["modelscope", "huggingface"],
                    help="Where to load the training dataset from")
-    p.add_argument("--tokenizer", default="Qwen/Qwen3-0.6B")
-    p.add_argument("--tokenizer_source", default="modelscope",
+    p.add_argument("--tokenizer", default="/data1/nuist_llm/TrainLLM/ModelCkpt/qwen3-06b-base")
+    p.add_argument("--tokenizer_source", default="local",
                    choices=["modelscope", "huggingface", "local"],
                    help="Where to load the tokenizer from")
     p.add_argument("--seq_len", type=int, default=2048)

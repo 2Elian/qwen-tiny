@@ -284,7 +284,7 @@ class Qwen3AttnResModel(Qwen3PreTrainedModel):
 
     def _init_weights(self, module):
         """Override to preserve AttnRes initialization."""
-        super()._init_weights(module)
+        super()._init_weights(module)# 指向pretrained model类
         if isinstance(module, Qwen3AttnResDecoderLayer):
             gate_type = getattr(self.config, "attnres_gate_type", "bias")
             if gate_type == "sigmoid_scalar":
@@ -322,7 +322,25 @@ class Qwen3AttnResModel(Qwen3PreTrainedModel):
         self.rotary_emb = Qwen3RotaryEmbedding(config=config)
         self.gradient_checkpointing = False
         self.has_sliding_layers = "sliding_attention" in self.config.layer_types
-
+        """
+        调用 __init__() 结束
+                │
+                ▼
+            ┌─────────────────────────────────────────────────────┐
+            │                   post_init()                        │
+            │                                                     │
+            │  1. 准备分布式策略空字典(TP/PP/FSPD/etc.)            │
+            │  2. 读取本层的特殊标签 (FP32/不可切分/权重绑定)      │
+            │  3. 【循环】把子模块的标签全部收集上来，加上路径前缀  │
+            │  4. init_weights():                                 │
+            │     ├─ 随机初始化未被加载的权重                      │
+            │     └─ 根据 all_tied_weights_keys 执行内存指针共享    │
+            │                                                     │
+            └─────────────────────────────────────────────────────┘
+                │
+                ▼
+            模型彻底准备好，可以送入优化器或进行推理了
+        """
         self.post_init()
 
     @merge_with_config_defaults
@@ -440,12 +458,16 @@ class Qwen3AttnResModel(Qwen3PreTrainedModel):
 # Causal LM head
 # ---------------------------------------------------------------------------
 
-class Qwen3AttnResForCausalLM(Qwen3PreTrainedModel, GenerationMixin):
+class Qwen3AttnResForCausalLM(Qwen3PreTrainedModel, GenerationMixin): # GenerationMixin如果你不给模型加上这个“混入类”，你的模型就只能像个算盘一样，拨一下算一下（只能根据输入预测下一个词）；加上它之后，你的模型就变成了一个打字机，能够自动、连续地吐出完整的文章。
     """Qwen3 causal LM with Block AttnRes residuals."""
-
+    # GenerationMixin它本身没有任何神经网络层，但它带来了大名鼎鼎的 .generate() 方法。
+    # 只要你写了 GenerationMixin，HF 会在底层默默为你做两件事：
+        # 自动加载生成配置：当你在本地加载模型时，HF 不仅会读取 config.json，还会自动寻找并读取 generation_config.json（里面存着比如 temperature=0.7, top_p=0.9 等默认生成参数）。
+        # 触发特定的单元测试：HF 的 CI/CD 流水线看到你的模型继承了这个类，就会自动跑一套“生成能力测试”，确保你的魔改没有把 .generate() 搞坏。
     config_class = Qwen3AttnResConfig
-    _tied_weights_keys = {"lm_head.weight": "model.embed_tokens.weight"}
-
+    _tied_weights_keys = {"lm_head.weight": "model.embed_tokens.weight"} # 在大多数大语言模型中，输入的词嵌入层（model.embed_tokens，把 token id 变成向量）和输出的 LM Head 层（lm_head，把隐藏层向量变回词表概率），它们的权重矩阵是完全一样的，这就是tied embedding）
+    # 为什么需要这个字典？保存模型时 (save_pretrained)：看到这个字典，HF 知道 lm_head.weight 是个“冒牌货”，就不会把它存进 pytorch_model.bin（或者存为软链接），只存 embed_tokens。
+    # 加载模型时 (load_pretrained)：HF 会先加载 embed_tokens 的权重，然后根据这个字典，自动把权重复制/链接给 lm_head。
     def __init__(self, config: Qwen3AttnResConfig):
         super().__init__(config)
         self.model = Qwen3AttnResModel(config)
