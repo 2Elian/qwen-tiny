@@ -35,6 +35,7 @@ from transformers.models.qwen3.modeling_qwen3 import Qwen3ForCausalLM
 
 
 def parse_args():
+    # export CUDA_VISIBLE_DEVICES=2,3
     p = argparse.ArgumentParser()
     p.add_argument("--mode", default="baseline", choices=["baseline", "block", "full"],
                    help="baseline (standard Qwen3), block (Block AttnRes), full (Full AttnRes)")
@@ -226,11 +227,11 @@ def main():
 
     # find_unused_parameters needed when some params aren't in the forward graph
     find_unused = args.gate_type != "bias"
-    model = DDP(model, device_ids=[local_rank], find_unused_parameters=find_unused)
+    model = DDP(model, device_ids=[local_rank], find_unused_parameters=find_unused) # 从DP -> DDP -> zero1,2,3 -> fsdp -> tp -> pp -> 3dp
 
     # ── optimizer ──
     optimizer = AdamW(model.parameters(), lr=args.lr,
-                      betas=(0.9, 0.95), weight_decay=0.1, eps=1e-8)
+                      betas=(0.9, 0.95), weight_decay=0.1, eps=1e-8) # 从随机梯度下降 到 动量法 到 adam 到adamw 到mont
     lr_min_ratio = args.lr_min / args.lr
     scheduler = LambdaLR(
         optimizer,

@@ -11,6 +11,13 @@
 - skill-pod
 - 在agent-sft的checkpoint上训embedding model和rerank model
 
+## 后续会探索的
+- mtp训练
+- mHC
+- 稀疏注意力，比如：csa、hca
+- search-r1训练
+- generate reward model
+
 
 ## 训练框架：
 

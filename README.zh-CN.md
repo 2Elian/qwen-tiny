@@ -132,7 +132,7 @@ d=1024, L=28, heads=16, kv_heads=8, ff=3072
 
 ```bash
 # Baseline
-torchrun --nproc_per_node=2 train.py \
+CUDA_VISIBLE_DEVICES=2,3 nohup torchrun --nproc_per_node=2 train.py \
   --mode baseline \
   --hidden_size 1024 \
   --num_layers 28 \
@@ -145,7 +145,8 @@ torchrun --nproc_per_node=2 train.py \
   --grad_accum 8 \
   --lr 6e-4 \
   --lr_min 6e-5 \
-  --save_every 50000
+  --save_every 2000 \
+  > baseline-train.log 2>&1 &
 
 # Block Attention Residuals
 torchrun --nproc_per_node=2 train.py \
