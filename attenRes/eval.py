@@ -2,8 +2,8 @@
 Evaluate from-scratch models on Chinese held-out data and Chinese benchmarks.
 
 Usage:
-    python eval.py --model_path output/scratch-baseline-d512-L12-20k/final --mode baseline
-    python eval.py --model_path output/scratch-block-d512-L12-20k/final --mode block
+    python eval.py --model_path /data1/nuist_llm/TrainLLM/attention-residuals-reproduction/attenRes/output/baseline-d1024-L28-20k/final --mode baseline
+    python eval.py --model_path /data1/nuist_llm/TrainLLM/attention-residuals-reproduction/attenRes/output/full-d512-L12-20k/final --mode block
     python eval.py --model_path output/scratch-full-d512-L12-20k/final --mode full
 """
 

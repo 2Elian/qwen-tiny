@@ -243,3 +243,9 @@ Qwen3AttnResModel.forward
 ## 7. Trainer详解
 
 ## 8. 训练过程记录
+
+| Model | Chinese Held-out PPL | C-Eval Acc | CMMLU Acc |
+|-------|----------------------|------------|-----------|
+| Baseline (Standard Residual) | 41.79 | 0.2314 | 0.2437 |
+| Full Attention Residuals | 60.08 | 0.2402 | 0.2437 |
+| Block Attention Residuals | 38.95 | 0.2838 | 0.2437 |

@@ -148,8 +148,22 @@ CUDA_VISIBLE_DEVICES=2,3 nohup torchrun --nproc_per_node=2 train.py \
   --save_every 2000 \
   > baseline-train.log 2>&1 &
 
+# Full Attention Residuals
+CUDA_VISIBLE_DEVICES=0,1 nohup torchrun --nproc_per_node=2 train.py \
+  --mode full \
+  --hidden_size 512 \
+  --num_layers 12 \
+  --num_heads 8 \
+  --num_kv_heads 4 \
+  --intermediate_size 1536 \
+  --seq_len 2048 \
+  --steps 20000 \
+  --batch_size 1 \
+  --grad_accum 8 \
+  > attenRes-full-train.log 2>&1 &
+
 # Block Attention Residuals
-torchrun --nproc_per_node=2 train.py \
+CUDA_VISIBLE_DEVICES=0,1 nohup torchrun --nproc_per_node=2 train.py \
   --mode block \
   --hidden_size 1024 \
   --num_layers 28 \
@@ -163,7 +177,8 @@ torchrun --nproc_per_node=2 train.py \
   --grad_accum 8 \
   --lr 6e-4 \
   --lr_min 6e-5 \
-  --save_every 50000
+  --save_every 5000 \
+  > attenRes-Blok-train.log 2>&1 &
 ```
 
 `full` 模式在 0.6B、`seq_len=2048` 下显存压力较高。若使用 24GB/32GB 单卡副本的 DDP
@@ -176,7 +191,7 @@ torchrun --nproc_per_node=2 train.py \
 python eval.py --model_path output/scratch-baseline-d512-L12-20k/final --mode baseline
 
 # Block Attention Residuals
-python eval.py --model_path output/scratch-block-d512-L12-20k/final --mode block
+python eval.py --model_path /data1/nuist_llm/TrainLLM/attention-residuals-reproduction/attenRes/output/block-d1024-L28-20k/final --mode block
 
 # Full Attention Residuals
 python eval.py --model_path output/scratch-full-d512-L12-20k/final --mode full
