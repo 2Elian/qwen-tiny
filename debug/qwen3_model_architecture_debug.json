@@ -1,0 +1,54 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Train (Single GPU)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/debug/qwen3_model_architecture.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--mode", "baseline",
+                "--hidden_size", "128",
+                "--num_layers", "2",
+                "--steps", "5",
+                "--batch_size", "1",
+                "--grad_accum", "1",
+                "--log_every", "1"
+            ],
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "0",
+                "MASTER_ADDR": "localhost",
+                "MASTER_PORT": "12355",
+                "RANK": "0",
+                "WORLD_SIZE": "1",
+                "LOCAL_RANK": "0"
+            },
+            "justMyCode": false
+        },
+        {
+            "name": "Debug with torchrun (Single GPU)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "torch.distributed.run",
+            "console": "integratedTerminal",
+            "args": [
+                "--nproc_per_node=1",
+                "--nnodes=1",
+                "--node_rank=0",
+                "--master_addr=localhost",
+                "--master_port=12355",
+                "${workspaceFolder}/debug/qwen3_model_architecture.py",
+                "--mode", "baseline",
+                "--hidden_size", "128",
+                "--num_layers", "2",
+                "--steps", "5",
+                "--batch_size", "1"
+            ],
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "0"
+            },
+            "justMyCode": false
+        }
+    ]
+}
