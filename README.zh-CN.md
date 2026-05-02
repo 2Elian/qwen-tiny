@@ -132,7 +132,7 @@ d=1024, L=28, heads=16, kv_heads=8, ff=3072
 
 ```bash
 # Baseline
-CUDA_VISIBLE_DEVICES=2,3 nohup torchrun --nproc_per_node=2 train.py \
+CUDA_VISIBLE_DEVICES=0,1 nohup torchrun --nproc_per_node=2 train.py \
   --mode baseline \
   --hidden_size 1024 \
   --num_layers 28 \

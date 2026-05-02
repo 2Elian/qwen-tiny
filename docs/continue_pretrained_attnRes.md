@@ -6,128 +6,44 @@
 
 ## 2. Qwen3-0.6B的模型架构详解
 
-```mermaid
-graph TD
-    subgraph Qwen3ForCausalLM
-        direction TB
-        
-        input_ids["input_ids<br>(batch, seq_len)"] --> embed_tokens["embed_tokens<br>nn.Embedding(vocab_size, hidden_size)"]
-        embed_tokens --> hidden["hidden_states<br>(batch, seq_len, hidden_size)"]
+### 2.1 transformers对LLM的模型架构
+<p align="center">
+  <img src="./images/attnRes/transformers-model-layer-framework.png" alt="trasnsformers-model-layer-architecture" width="800"/>
+</p>
 
-        hidden --> rope["Qwen3RotaryEmbedding<br>forward(hidden_states, position_ids)"]
-        rope --> cos_sin[("cos, sin<br>(batch, seq_len, head_dim)")]
-        
-        hidden --> layers_loop["for each Qwen3DecoderLayer"]
-        cos_sin --> layers_loop
-        attention_mask["attention_mask / causal_mask"] --> layers_loop
-        past_kv["past_key_values (optional)"] --> layers_loop
-        
-        layers_loop --> hidden_after_layers["hidden_states"]
-        hidden_after_layers --> final_norm["norm<br>Qwen3RMSNorm"]
-        final_norm --> final_hidden["hidden_states normalized"]
-        final_hidden --> lm_head["lm_head<br>nn.Linear(hidden_size, vocab_size)"]
-        lm_head --> logits["logits<br>(batch, seq_len, vocab_size)"]
-        logits --> loss_check{"labels != None?"}
-        loss_check -- Yes --> loss_fn["CrossEntropyLoss"]
-        loss_fn --> output_full(("CausalLMOutputWithPast<br>(loss, logits, past_key_values, ...)"))
-        loss_check -- No --> output_no_loss(("CausalLMOutputWithPast<br>(logits, past_key_values, ...)"))
-    end
+<p align="center">
+  <img src="./images/attnRes/causalLMmodel.png" alt="trasnsformers-model-layer-architecture" width="800"/>
+</p>
 
-    subgraph DecoderLayer["Qwen3DecoderLayer (one layer)"]
-        direction TB
-        layer_in["hidden_states<br>from previous layer"] --> res1["residual1 = hidden_states"]
-        res1 --> input_ln["input_layernorm<br>Qwen3RMSNorm"]
-        input_ln --> attn_block["self_attn<br>Qwen3Attention"]
-        cos_sin --> attn_block
-        attention_mask --> attn_block
-        past_kv --> attn_block
-        
-        attn_block --> attn_out["attention output"]
-        attn_out --> add1((+))
-        res1 --> add1
-        add1 --> res2["residual2 = hidden_states"]
-        res2 --> post_ln["post_attention_layernorm<br>Qwen3RMSNorm"]
-        post_ln --> mlp_block["mlp<br>Qwen3MLP"]
-        mlp_block --> mlp_out["MLP output"]
-        mlp_out --> add2((+))
-        res2 --> add2
-        add2 --> layer_out["hidden_states<br>to next layer"]
-    end
 
-    subgraph Attention["Qwen3Attention (self_attn)"]
-        direction TB
-        attn_in["hidden_states"] --> q_proj["q_proj<br>Linear(hidden, num_heads*head_dim)"]
-        attn_in --> k_proj["k_proj<br>Linear(hidden, num_kv_heads*head_dim)"]
-        attn_in --> v_proj["v_proj<br>Linear(hidden, num_kv_heads*head_dim)"]
+<p align="center">
+  <img src="./images/attnRes/qwen3-model-impl.png" alt="trasnsformers-model-layer-architecture" width="800"/>
+</p>
 
-        q_proj --> q_reshape["view -> q_norm<br>Qwen3RMSNorm(head_dim)<br>transpose(1,2)"]
-        k_proj --> k_reshape["view -> k_norm<br>Qwen3RMSNorm(head_dim)<br>transpose(1,2)"]
-        v_proj --> v_reshape["view -> transpose(1,2)"]
 
-        q_reshape --> q_rope["apply_rotary_pos_emb<br>q * cos + rotate_half(q) * sin"]
-        k_reshape --> k_rope["apply_rotary_pos_emb<br>k * cos + rotate_half(k) * sin"]
-        cos_sin --> q_rope
-        cos_sin --> k_rope
+<p align="center">
+  <img src="./images/attnRes/qwen3-decoder-impl.png" alt="trasnsformers-model-layer-architecture" width="800"/>
+</p>
 
-        q_rope --> query["query_states<br>(batch, heads, seq, head_dim)"]
-        k_rope --> key["key_states<br>(batch, kv_heads, seq, head_dim)"]
-        v_reshape --> value["value_states<br>(batch, kv_heads, seq, head_dim)"]
 
-        key --> repeat_kv["repeat_kv<br>expand to num_heads"]
-        value --> repeat_kv
+<p align="center">
+  <img src="./images/attnRes/qwen3-attention-impl.png" alt="trasnsformers-model-layer-architecture" width="800"/>
+</p>
 
-        query --> qk_matmul["Q * K^T"]
-        repeat_kv --> qk_matmul
-        qk_matmul --> scale["* scaling<br>(head_dim^-0.5)"]
-        scale --> mask_add["+ attention_mask"]
-        mask_add --> softmax["softmax(dim=-1, float32)"]
-        softmax --> dropout["dropout(p=attention_dropout)"]
-        dropout --> attn_weights["attn_weights"]
-        attn_weights --> sv_matmul["attn_weights * V"]
-        repeat_kv --> sv_matmul
-        sv_matmul --> attn_transpose["transpose(1,2) + contiguous"]
-        attn_transpose --> o_proj["o_proj<br>Linear(num_heads*head_dim, hidden)"]
-        o_proj --> attn_output["attention output"]
-    end
-
-    subgraph MLP["Qwen3MLP"]
-        direction TB
-        mlp_in["hidden_states"] --> gate_proj["gate_proj<br>Linear(hidden, intermediate)"]
-        mlp_in --> up_proj["up_proj<br>Linear(hidden, intermediate)"]
-        gate_proj --> act_fn["act_fn (SiLU)"]
-        act_fn --> multiply["*"]
-        up_proj --> multiply
-        multiply --> down_proj["down_proj<br>Linear(intermediate, hidden)"]
-        down_proj --> mlp_output["MLP output"]
-    end
-
-    %% 连接顶层与子图
-    layers_loop -.-> DecoderLayer
-    attn_block -.-> Attention
-    mlp_block -.-> MLP
-```
-
-图中用 -.-> 表示模块归属关系，并非数据流；数据流全部使用实线箭头。每个子图内部详细展示了计算步骤，包括：
-
-- Embedding：embed_tokens 将 input_ids 映射为隐藏状态。
-
-- RoPE：Qwen3RotaryEmbedding 输出 cos, sin 给所有层的 Attention。
-
-- Attention 结构：Q/K/V 投影、Q/K 的 RMSNorm（q_norm, k_norm）、RoPE 应用 (apply_rotary_pos_emb)、GQA 扩展 (repeat_kv)、缩放点积注意力、o_proj 输出。
-
-- MLP：SwiGLU 结构 (gate_proj + up_proj 相乘后 down_proj)。
-
-- 残差连接：在 Attention 前后和 MLP 前后各有一个残差加法 (residual1/2)。
-
-- RMSNorm：input_layernorm 和 post_attention_layernorm 分别作用于 Attention 和 MLP 的输入，最终还有一个顶层的 norm。
-
-- 输出：lm_head 将最后归一化的隐状态投影到词表，可选地计算交叉熵损失。
+<p align="center">
+  <img src="./images/attnRes/qwen3-mlp-impl.png" alt="trasnsformers-model-layer-architecture" width="800"/>
+</p>
 
 
 
 ## 3. transformers-模型代码详解
 
+代码已熟悉完毕，即将录制视频
+
 ## 4. attenRes详解
+
+公式还没推导
+
 
 ## 5. 如何修改模型
 
@@ -240,9 +156,7 @@ Qwen3AttnResModel.forward
 
 ## 6. 训练参数详解
 
-## 7. Trainer详解
-
-## 8. 训练过程记录
+## 7. 训练过程记录
 
 | Model | Chinese Held-out PPL | C-Eval Acc | CMMLU Acc |
 |-------|----------------------|------------|-----------|
