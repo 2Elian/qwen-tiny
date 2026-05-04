@@ -4,6 +4,8 @@
 
 ## 文档
 
+- [llm的基本原理](/docs/llm_Basic%20principles.md)
+
 - [continue pre-train: attention residual教程与日志 base qwen-0.6B-Base](/docs/continue_pretrained_attnRes.md)在这里您将学习到qwen3的架构详解、transformers的基础用法，并学习到如何使用transformers更改模型结构。
 
 
