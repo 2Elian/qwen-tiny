@@ -1,6 +1,13 @@
 # elian-qwen-tiny: LLM post-training
 
-2elian/qwen-tiny基于qwen3-0.6B-Base出发，探索attentioon residuals(探索这个的目的是为了：全面了解transformers框架如何更改原始模型的结构，并进行持续训练，学完它您将掌握transformers的基本训练流程并对LLM的架构更加清晰）。然后转向指令微调和Agent训练
+## 为什么写了这个项目？
+
+愿景是：让每一个学习LLM和Agent的本硕博同学少走弯路，qwen-tiny提供从LLM原理(致力于讲清楚每一个原理细节)到后训练(致力于教会同学们如何魔改模型，并掌握transformers、llamafactory、verl源码)再到agent训练的完整pipeline教程。
+
+预计的教学形式为视频为主，文档为辅
+<p align="center">
+  <img src="docs/images/qwen-tiny-development-plan.png" width="700">
+</p>
 
 ## 文档
 
