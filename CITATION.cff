@@ -1,0 +1,10 @@
+cff-version: 1.2.0
+message: "If you use Qwen-Tiny in your research, please cite it as below."
+title: "Qwen-Tiny"
+abstract: "The self-improving AI agent with a built-in learning loop — it creates skills from experience, improves them during use, and builds a deepening model of who you are across sessions."
+authors:
+  - name: "Zimo Li"
+repository-code: "https://github.com/2Elian/qwen-tinyt"
+url: "https://github.com/2Elian/qwen-tiny"
+license: MIT
+type: software

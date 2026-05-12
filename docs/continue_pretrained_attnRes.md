@@ -4,48 +4,222 @@
 
 我相信使用持续预训练 addRess 练将提高您对 LLM 架构的理解，并使您能够学习如何使用 transformers 训练模型、改进transformers的模型架构代码。
 
-## 2. Qwen3-0.6B的模型架构详解
+## 2. attenRes详解
 
-### 2.1 transformers对LLM的模型架构
-<p align="center">
-  <img src="./images/attnRes/transformers-model-layer-framework.png" alt="trasnsformers-model-layer-architecture" width="800"/>
-</p>
+一切的根源：深度神经网络：
 
-<p align="center">
-  <img src="./images/attnRes/causalLMmodel.png" alt="trasnsformers-model-layer-architecture" width="800"/>
-</p>
+$$h_l = f_{l-1}(h_{l-1})$$
 
+这是一个标准的深度神经网络，第l层的hidden state. f是一个非线性激活函数(可以是relu、可以是sigmoid等)
 
-<p align="center">
-  <img src="./images/attnRes/qwen3-model-impl.png" alt="trasnsformers-model-layer-architecture" width="800"/>
-</p>
+那么它有什么问题呢？kaiming为什么要提出残差结构呢？
 
+假设现在我们要求Loss对h1的梯度：
 
-<p align="center">
-  <img src="./images/attnRes/qwen3-decoder-impl.png" alt="trasnsformers-model-layer-architecture" width="800"/>
-</p>
+$$\frac{\partial L}{\partial h_1} = \frac{\partial L}{\partial h_2}\frac{\partial h_2}{\partial h_1} = \dots = \frac{\partial L}{\partial h_l}\frac{\partial h_l}{\partial h_{l-1}}\frac{\partial h_{l-1}}{\partial h_{l-2}}\dots\frac{\partial h_2}{\partial h_{1}}$$
 
+而$\frac{\partial h_l}{\partial h_{l-1}} = \frac{\partial f_{l-1}}{\partial h_{l-1}}$
 
-<p align="center">
-  <img src="./images/attnRes/qwen3-attention-impl.png" alt="trasnsformers-model-layer-architecture" width="800"/>
-</p>
+所以L对h1的梯度可以表示为：
 
-<p align="center">
-  <img src="./images/attnRes/qwen3-mlp-impl.png" alt="trasnsformers-model-layer-architecture" width="800"/>
-</p>
+$$\frac{\partial L}{\partial h_1} = \frac{\partial L}{\partial h_l}\frac{\partial f_{l-1}}{\partial h_{l-1}}\frac{\partial f_{l-2}}{\partial h_{l-2}}\dots\frac{\partial f_1}{\partial h_{1}}$$
 
+从上述公式可以看出来什么问题嘛？
 
+thinking...
 
-## 3. transformers-模型代码详解
+---
 
-代码已熟悉完毕，即将录制视频
+好啦，上面公式最大的问题是：如果某一层的梯度值非常小（比如<1），那么随着网络深度增加，这个梯度相乘就会越来越小，从而导致最后传递到h1的梯度几乎为0，也就是我们常常说的：梯度消失问题。
 
-## 4. attenRes详解
-
-公式还没推导
+所以从这个角度来看，如何能避免梯度消失呢？从上述梯度公式的角度来看，似乎把每一个$\frac{\partial f_{l-1}}{\partial h_{l-1}}$加上一点点的值变成：$(\frac{\partial f_{l-1}}{\partial h_{l-1}} + ?)$就能避免梯度连乘导致的小值向后传播的问题。
 
 
-## 5. 如何修改模型
+我们看看kaiming的残差是怎么做的：
+
+$$h_l = h_{l-1} + f_{l-1}(h_{l-1})$$
+
+此时，对 $h_{l-1}$ 求导：
+
+$$\frac{\partial h_l}{\partial h_{l-1}} = \frac{\partial (h_{l-1} + f_{l-1}(h_{l-1}))}{\partial h_{l-1}} = I + \frac{\partial f_{l-1}}{\partial h_{l-1}}$$
+
+其中 **$I$ 是单位矩阵（Identity Matrix）**。这就是为什么大家管残差连接叫做**恒等映射（Identity Mapping）**——因为即使 $f_{l-1}$ 什么都没学到（梯度为 0），信息也能通过 $I$ 原封不动地传到下一层。
+
+---
+
+### 2.1 残差如何解决梯度消失：从链式法则看
+
+现在把残差的梯度代回 Loss 对 $h_1$ 的链式求导：
+
+$$\frac{\partial L}{\partial h_1} = \frac{\partial L}{\partial h_l} \left(I + \frac{\partial f_{l-1}}{\partial h_{l-1}}\right) \left(I + \frac{\partial f_{l-2}}{\partial h_{l-2}}\right) \dots \left(I + \frac{\partial f_1}{\partial h_1}\right)$$
+
+展开这个连乘，每一项都是 $(I + \frac{\partial f}{\partial h})$，而不是原来的 $\frac{\partial f}{\partial h}$。关键区别：
+
+| | Plain 网络 | Residual 网络 |
+|---|---|---|
+| 每层雅可比 | $\frac{\partial f}{\partial h}$ | $I + \frac{\partial f}{\partial h}$ |
+| 梯度链 | 纯连乘 → 指数衰减 | 恒等路径 + 变换路径 |
+| 最坏情况 | $\prod \lambda_i \approx 0$ | 至少有 $I$ 项保底 |
+
+**直观理解：**
+
+- **Plain 网络**：梯度像传话游戏，每传一层就打一次折扣。如果每层梯度范数 < 1（这对 Sigmoid/Tanh 几乎必然发生），传 100 层后梯度就是 $0.9^{100} \approx 0$。
+- **Residual 网络**：梯度有**两条路径**——一条是 $I$ 组成的"高速公路"（梯度直接穿过），另一条是经过各层变换的"普通公路"。展开后：
+
+$$\frac{\partial L}{\partial h_1} = \frac{\partial L}{\partial h_l} \cdot \left[ I + \sum_i \frac{\partial f_i}{\partial h_i} + \sum_{i<j} \frac{\partial f_i}{\partial h_i}\frac{\partial f_j}{\partial h_j} + \dots \right]$$
+
+第一项 $I$ 保证**梯度至少能原样传到浅层**，后面各项是各层变换的贡献。即使深层变换的梯度很小，$I$ 也不会消失。
+
+---
+
+### 2.2 实验验证：不同激活函数下的梯度流动
+
+我们用 10/30/50/100 层 MLP 做了对照实验（代码见 `attenRes/deep_residual_experiment.py`），在初始化后测量每层输入梯度范数：
+
+**Plain 网络（无残差）—— 梯度消失随深度加剧：**
+
+| 深度 | ReLU | GELU | Tanh | SiLU |
+|------|------|------|------|------|
+| 10 | ratio=14.3 | ratio=13.7 | ratio=11.3 | ratio=30.3 |
+| 30 | ratio=11.8 | ratio=12.7 | ratio=4.2 | **ratio=1954** |
+| 50 | ratio=11.6 | ratio=79.2 | ratio=1.2 | **ratio=1.6×10⁷** |
+| 100 | ratio=6.9 | **ratio=1.1×10⁹** | ratio=0.1 | **ratio=4.1×10¹⁰** |
+
+> ratio = 最后一层梯度 / 第一层梯度。ratio < 0.01 即严重梯度消失。
+
+**关键发现：**
+- **SiLU 最严重**：100 层时前向值衰减到 $10^{-12}$，浅层几乎收不到梯度信号
+- **Tanh 最鲁棒**：S 型函数梯度饱和是已知问题，但 Tanh 在无残差时表现最好
+- **ReLU 的"假健康"**：梯度比看起来还行（6~14），但这是因为部分神经元死亡后梯度集中在少数活神经元上，不代表有效学习（训练损失 13 vs 残差网络 6）
+
+**Residual 网络（有残差）—— 梯度流动健康：**
+
+| 深度 | ReLU | GELU | Tanh | SiLU |
+|------|------|------|------|------|
+| 10 | ratio=5.8 | ratio=6.4 | ratio=5.9 | ratio=7.0 |
+| 30 | ratio=1.6 | ratio=5.8 | ratio=5.1 | ratio=7.3 |
+| 50 | ratio=0.4 | ratio=4.9 | ratio=4.6 | ratio=7.3 |
+| 100 | ratio=0.04 | ratio=2.3 | ratio=4.2 | ratio=7.2 |
+
+**关键发现：**
+- 所有激活函数的梯度比稳定在健康范围，不会出现指数级衰减
+- **Tanh + Residual 是黄金组合**：100 层时 ratio=4.2，训练损失从 ~14 降到 ~6
+- **ReLU 在极深网络（100 层）中 ratio=0.04**：虽比 Plain 好很多，但 ReLU 的非负输出导致前向均值逐层漂移，需要配合 LayerNorm/BatchNorm 使用
+- **SiLU 的救赎**：Plain 网络 ratio 高达 $10^{10}$，加残差后稳定在 ~7
+
+---
+
+### 2.3 残差学习的本质
+
+```
+Plain 网络:   h_l = f(h_{l-1})           → 梯度 ∏ ∂f/∂h   → 指数衰减
+Residual 网络: h_l = h_{l-1} + f(h_{l-1}) → 梯度 ∏ (I+∂f/∂h) → 始终有 I 保底
+```
+
+残差的本质不是在"改进"网络，而是在**改变梯度传播的数学结构**——把连乘变成了加性展开，让深层网络从"几乎不可能训练"变成了"几乎和浅层一样容易训练"。这也就是何恺明在 ResNet 论文中说的：**"We hypothesize that it is easier to optimize the residual mapping than to optimize the original, unreferenced mapping."**
+
+---
+
+### 2.4 从残差连接到 Attention Residuals：动机与做法
+
+把残差递推式展开：
+
+$$h_l = h_{l-1} + f_{l-1}(h_{l-1}) = h_1 + \sum_{i=1}^{l-1} f_i(h_i)$$
+
+可以看到**每一层都接收到所有先前层输出的等权和**。残差定义了信息如何沿着深度聚合，这种深度维度的聚合仍然由**固定的单位权重**支配，即没有任何机制可以选择性地强调或抑制个别层的贡献。
+
+#### 2.4.1 标准残差的三个局限
+
+**1. 无法选择性访问**
+
+第l层只能访问 $h_{l-1}$ 这一个单一的压缩状态。不同层类型（例如 self-attention vs. MLP）接收到完全相同的聚合状态，尽管它们可能受益于不同的层输出加权。打个比方：attention 层可能想多看几眼前面某个 MLP 的输出，但残差给它的只是一个"大锅饭"。
+
+**2. 信息不可逆丢失**
+
+展开递推 $h_l = h_1 + \sum_{i=1}^{l-1} f_i(h_i)$，所有先前层的贡献被**等权相加**。一旦信息被聚合进了 $h_{l-1}$，深层就无法从聚合体中单独恢复出某一层的原始输出。这在实践中有直接后果：论文中提到：实验表明，相当比例的层可以被剪枝而损失很小，说明深层并没有充分利用浅层的信息。
+
+**3. 隐藏状态膨胀**
+
+在现代 LLM 中，PreNorm（先归一化再做变换）已成为主导范式。但在 PreNorm + 残差的组合下，隐藏状态的模长随深度以 **$O(L)$ 增长**，逐渐稀释每一层的相对贡献。浅层信息被"淹没"在不断膨胀的累积和中，无法被深层选择性地检索（这句话的意思是说，如果中间的第k层的前向值非常大，那么第l层接收的大部分信息都来自于第k层，其他层的信息都被稀释掉了）。
+
+这三者共同指向一个需求：**让每一层能够选择性地、以数据依赖的方式从所有先前层中聚合信息。**
+
+#### 2.4.2 AttnRes 怎么做
+
+将标准残差的等权求和：
+
+$$h_l = \sum_{i=0}^{l-1} v_i \quad \text{（其中 } v_0 = h_1,\; v_i = f_i(h_i) \text{）}$$
+
+替换为**可学习的加权求和**：
+
+$$h_l = \sum_{i=0}^{l-1} \alpha_{i \to l} \cdot v_i, \quad \sum_i \alpha_{i \to l} = 1$$
+
+其中 $\alpha_{i \to l}$ 是 softmax 注意力权重，由每层一个**可学习的伪查询向量** $w_l \in \mathbb{R}^d$ 计算：
+
+$$\alpha_{i \to l} = \frac{\exp\left(w_l^\top \cdot \text{RMSNorm}(v_i)\right)}{\sum_{j=0}^{l-1} \exp\left(w_l^\top \cdot \text{RMSNorm}(v_j)\right)}$$
+
+每一层只需要**一个额外的 d 维向量** $w_l$ 作为"查询"，去注意所有先前层的输出 $v_i$。RMSNorm 防止大模长的层输出主导注意力权重。
+
+**关键：** $w_l$ 是参数而非输入依赖的——它代表"作为一个 attention 层（或 MLP 层），我应该多关注哪些前面的层"。这个设计选择意味着查询与当前层的计算解耦，使得注意力权重可以提前计算或批量处理。
+
+**标准残差是 AttnRes 的特例：** 当所有 $\alpha_{i \to l}$ 退化为均匀分布时，AttnRes 退化为标准残差。更一般地说，标准残差执行的是**深度维度的线性注意力**（linear attention over depth），而 AttnRes 将其推广为**深度维度的 softmax 注意力**.
+
+#### 2.4.3 Full AttnRes 与 Block AttnRes
+
+**Full AttnRes** 让每一层直接注意所有先前层的输出：
+
+```
+第 l 层的输入 = softmax 注意力(查询=w_l, 键/值=[h1, f1(h1), f2(h2), ..., f_{l-1}(h_{l-1})])
+```
+
+优势：最细粒度的信息访问。开销：$O(L^2 d)$ 计算，$O(Ld)$ 显存（但在标准训练中这些激活值本来就要为反向传播保留，所以**没有额外显存开销**）。
+
+**问题：** 在大规模训练中，激活重计算（activation recomputation）和流水线并行（pipeline parallelism）是标配。Full AttnRes 要求显式保存并跨流水线阶段传输所有 $L$ 个层的输出，通信开销为 $O(Ld)$。
+
+**Block AttnRes** 将 $L$ 层划分为 $N$ 个 block，每个 block 包含 $S = L/N$ 层：
+
+- **Block 内部：** 使用标准残差，$S$ 层的输出被累加为一个单一的 block 表示 $b_n = \sum_{j \in B_n} f_j(h_j)$
+- **Block 之间：** 对 $N$ 个 block 级别表示 + 当前 block 内的部分和（partial block）应用 full attention
+
+```
+第 l 层的输入 = softmax_注意力(查询=w_l, 键/值=[b0, b1, ..., b_{n-1}, partial_block])
+```
+
+优势：显存和通信从 $O(Ld)$ 降至 $O(Nd)$。$N \approx 8$ 在实践中几乎恢复了 Full AttnRes 的全部收益。
+
+**AttnRes 的完整算法伪代码（对应 `modeling_attnres.py`）：**
+
+```python
+def block_attn_res(blocks, partial_block, proj, norm, recency_bias):
+    """
+    blocks:      已完成 block 的表示 [b0, b1, ..., b_{n-1}]  每项 [B, T, D]
+    partial_block: 当前 block 内部分累加和 (b_n^i)            [B, T, D]
+    proj:        伪查询 w_l  (nn.Linear(D, 1, bias=False))
+    norm:        RMSNorm
+    recency_bias: 标量偏置，加在 partial_block 的 logit 上
+    """
+    V = torch.stack(blocks + [partial_block])          # [N+1, B, T, D]
+    K = norm(V)                                        # 对 keys 做 RMSNorm
+    query = proj.weight.view(-1)                       # (D,)
+    logits = torch.einsum('d, n b t d -> n b t', query, K)
+    logits[-1] = logits[-1] + recency_bias             # 近因偏置
+    weights = logits.softmax(dim=0)                    # [N+1, B, T]
+    h = torch.einsum('n b t, n b t d -> b t d', weights, V)
+    return h
+```
+
+**近因偏置（Recency Bias）的设计：** 在 softmax 前给 partial_block（当前 block 的未完成部分）加一个大的正偏置，使初始化时 $\alpha_{\text{partial}} \approx 1$，即 `block_attn_res(...) ≈ partial_block`。这意味着**训练开始时，AttnRes 在数学上等价于标准残差**。随着训练进行，$w_l$ 和偏置共同适配，网络逐渐学会跨 block 的注意力。
+
+**AttnRes vs 标准残差**
+
+```
+标准残差:   h_l = h1 + f1 + f2 + ... + f_{l-1}       (等权累加)
+AttnRes:    h_l = α0·h1 + α1·f1 + α2·f2 + ...         (可学习加权)
+                 └── softmax(w_l^T · RMSNorm(v_i)) ──┘
+```
+
+
+## 3. 如何修改模型
 
 ```python
 """
@@ -154,9 +328,9 @@ Qwen3AttnResModel.forward
 """
 ```
 
-## 6. 训练参数详解
+## 4. 训练参数详解
 
-## 7. 训练过程记录
+## 5. 训练过程记录
 
 | Model | Chinese Held-out PPL | C-Eval Acc | CMMLU Acc |
 |-------|----------------------|------------|-----------|

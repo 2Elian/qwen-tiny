@@ -11,9 +11,9 @@
 
 ## 文档
 
-- [llm的基本原理](/docs/llm_Basic%20principles.md)
+- [llm的基本原理](/docs/llm_Basic%20principles.md)在这里您将详细的学习到transformer理论，每个部分揉碎了讲解，并附上transformers的model模块的学习。
 
-- [continue pre-train: attention residual教程与日志 base qwen-0.6B-Base](/docs/continue_pretrained_attnRes.md)在这里您将学习到qwen3的架构详解、transformers的基础用法，并学习到如何使用transformers更改模型结构。
+- [continue pre-train: attention residual教程与日志 base qwen-0.6B-Base](/docs/continue_pretrained_attnRes.md)在这里您将学习到残差连接的本质与attention residual理论，并学习到如何使用transformers更改模型结构。
 
 
 - [lora 微调 base qwen-0.6B-instruct](/docs/continue_pretrained_attnRes.md)在这里您将学习到如何使用transformers进行lora微调
@@ -22,6 +22,7 @@
 - [agent sft base qwen-0.6B-instruct](/docs/continue_pretrained_attnRes.md)在这里您将系统的学习到llafactroy后端源码，以及收集agent-sft训练数据的策略、训练的方法等
 - [agent rl 包括: general/search/tool call base qwen-0.6B-instruct](/docs/continue_pretrained_attnRes.md)在这里您将系统的学习verl源码，进行更高难度的rl训练。
 - [on-policy distillation](/docs/continue_pretrained_attnRes.md)
+- [深入解析当代agent核心架构：深入claude code、herme、openclaw源码](/docs/continue_pretrained_attnRes.md)
 
 ## 后续会探索的
 - mtp训练
