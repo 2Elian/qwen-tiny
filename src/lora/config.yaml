@@ -10,14 +10,14 @@ model:
 
 # 数据
 data:
-  train_file: "/data1/nuist_llm/TrainLLM/attention-residuals-reproduction/data/nl2sql/cot-qa-cold-start.csv"
-  max_seq_length: 2048
+  train_file: "/data1/nuist_llm/TrainLLM/attention-residuals-reproduction/data/nl2sql/cot-qa.csv"
+  max_seq_length: 1024
   val_split: 0.05
 
 # LoRA
 lora:
-  r: 64
-  lora_alpha: 128
+  r: 16
+  lora_alpha: 32
   lora_dropout: 0.05
   target_modules:   
     - q_proj
@@ -32,8 +32,8 @@ lora:
 
 # 训练
 training:
-  output_dir: "./output/lora-nl2sql"
-  num_train_epochs: 3
+  output_dir: "./output/lora-nl2sql/qkvogud"
+  num_train_epochs: 2
   per_device_train_batch_size: 2
   per_device_eval_batch_size: 2
   gradient_accumulation_steps: 8        # effective batch = 16

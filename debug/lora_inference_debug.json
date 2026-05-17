@@ -1,0 +1,19 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Train Single GPU lora",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/debug/lora_infernece_debug.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--enable_thinking"
+            ],
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "0"
+            },
+            "justMyCode": false
+        }
+    ]
+}

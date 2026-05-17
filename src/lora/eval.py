@@ -14,7 +14,7 @@ NL2SQL Evaluation Script
   python eval.py --model /data1/nuist_llm/TrainLLM/ModelCkpt/qwen3-06b
 
   # 评估 LoRA 微调后的模型
-  python eval.py --model /data1/nuist_llm/TrainLLM/attention-residuals-reproduction/src/lora/output/lora-nl2sql/final \
+  python eval.py --model /data1/nuist_llm/TrainLLM/attention-residuals-reproduction/src/lora/output/lora-nl2sql/qkvogud/checkpoint-1030 \
                  --base_model /data1/nuist_llm/TrainLLM/ModelCkpt/qwen3-06b
 
   # 限制评估数量
@@ -399,7 +399,7 @@ def main():
     parser.add_argument("--base_model", type=str, default=None,
                         help="Base model path (required if --model is a LoRA adapter)")
     parser.add_argument("--data", type=str,
-                        default="/data1/nuist_llm/TrainLLM/attention-residuals-reproduction/data/nl2sql/cot-qa.csv",
+                        default="/data1/nuist_llm/TrainLLM/attention-residuals-reproduction/data/nl2sql/cot-qa-cold-start.csv",
                         help="Eval dataset path")
     parser.add_argument("--max_samples", type=int, default=None,
                         help="Max number of samples to evaluate (None = all)")
