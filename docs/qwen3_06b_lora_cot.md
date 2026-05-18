@@ -145,3 +145,46 @@ Base model（预训练权重）主要学习以 `<|endoftext|>`（151643）结束
 #### 问题3：输出不产生最后的\`\`\`sql\`\`\`
 
 调整温度参数，就会好一些。但还是不太稳定。(还是base模型的问题，换成下游模型就非常的稳定了)
+
+#### 实验结果
+
+```text
+============================================================
+  Evaluation Results (500 samples)
+============================================================
+  Exact Match Accuracy:  58/500 = 11.60%
+  Avg Token F1:          0.8752
+
+  Component Matching (Jaccard):
+    select_cols         : 0.5329
+    where_conditions    : 0.6707
+    join_conditions     : 0.8082
+    group_by            : 0.9107
+    order_by            : 0.9020
+    aggregates          : 0.8890
+    distinct            : 0.7980
+    limit               : 0.9600
+============================================================
+```
+
+### 2. qk
+
+
+```text
+============================================================
+  Evaluation Results (500 samples)
+============================================================
+  Exact Match Accuracy:  41/500 = 8.20%
+  Avg Token F1:          0.8517
+
+  Component Matching (Jaccard):
+    select_cols         : 0.4910
+    where_conditions    : 0.6095
+    join_conditions     : 0.7757
+    group_by            : 0.9047
+    order_by            : 0.8940
+    aggregates          : 0.8670
+    distinct            : 0.7980
+    limit               : 0.9600
+==================================
+```

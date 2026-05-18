@@ -14,7 +14,7 @@ NL2SQL Evaluation Script
   python eval.py --model /data1/nuist_llm/TrainLLM/ModelCkpt/qwen3-06b
 
   # 评估 LoRA 微调后的模型
-  python eval.py --model /data1/nuist_llm/TrainLLM/attention-residuals-reproduction/src/lora/output/lora-nl2sql/qkvogud/checkpoint-1030 \
+  python eval.py --model /data1/nuist_llm/TrainLLM/attention-residuals-reproduction/src/lora/output/lora-nl2sql/qk/checkpoint-1030 \
                  --base_model /data1/nuist_llm/TrainLLM/ModelCkpt/qwen3-06b
 
   # 限制评估数量

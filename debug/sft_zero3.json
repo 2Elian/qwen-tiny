@@ -1,0 +1,36 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug SFT",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/sft/main.py",
+            "console": "integratedTerminal",
+            "args": [
+                "--config", "/data1/nuist_llm/TrainLLM/attention-residuals-reproduction/src/sft/config.yaml"
+            ],
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "0,3"
+            },
+            "justMyCode": false
+        },
+        {
+            "name": "Debug SFT 2 GPU",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "torch.distributed.run",
+            "console": "integratedTerminal",
+            "args": [
+                "--nproc_per_node=2",
+                "--rdzv_backend=c10d",
+                "${workspaceFolder}/src/sft/main.py",
+                "--config", "/data1/nuist_llm/TrainLLM/attention-residuals-reproduction/src/sft/config.yaml"
+            ],
+            "env": {
+                "CUDA_VISIBLE_DEVICES": "0,3"
+            },
+            "justMyCode": false
+        }
+    ]
+}

@@ -1,0 +1,38 @@
+# ── DeepMath-103K SFT Training Config ──
+
+model:
+  name_or_path: "/data1/nuist_llm/TrainLLM/ModelCkpt/qwen3-06b-base"
+  trust_remote_code: true
+  torch_dtype: "bfloat16"
+  attn_implementation: "sdpa"
+
+data:
+  data_dir: "/data1/nuist_llm/TrainLLM/attention-residuals-reproduction/data/DeepMath-103K/filtered"
+  max_seq_length: 2048
+  val_split: 0.02
+  system_prompt: "You are a helpful math reasoning assistant. Think step by step before answering."
+  num_files: 2                # null = use all filtered files
+
+training:
+  output_dir: "./output/deepmath-sft-zero3"
+  num_train_epochs: 15
+  per_device_train_batch_size: 2
+  per_device_eval_batch_size: 2
+  gradient_accumulation_steps: 8    # effective batch = 4 * 8 = 32
+  learning_rate: 2.0e-5
+  lr_scheduler_type: "cosine"
+  warmup_ratio: 0.05
+  weight_decay: 0.01
+  max_grad_norm: 1.0
+  bf16: true
+  logging_steps: 10
+  save_strategy: "steps"
+  save_steps: 500
+  eval_strategy: "steps"
+  eval_steps: 500
+  save_total_limit: 3
+  load_best_model_at_end: true
+  metric_for_best_model: "eval_loss"
+  report_to: "none"
+  dataloader_num_workers: 4
+  seed: 42

@@ -6,10 +6,10 @@ print(tokenizer)
 # token_ids = [151645, 198, 151644, 77091, 198, 151667]
 # token = tokenizer.decode(token_ids)
 # print(token)
-tokens = ["นำข้อมูลมาใช้"]
+tokens = ["\\(", "\\boxed"]
 token_ids = tokenizer.encode(tokens)
 print(token_ids)
 
-token_ids = [124822, 47839, 80614, 91200, 124029, 124207, 19841]
+token_ids = [59]
 token = tokenizer.decode(token_ids)
 print(token)
