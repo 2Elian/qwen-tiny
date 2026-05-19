@@ -2,7 +2,7 @@
 """
 Interactive CLI for Qwen3 model inference with streaming output.
 Usage:
-    python inference.py --gpu 3
+    python inference.py --gpu 0
     python inference.py --gpu 0,1
     python inference.py --gpu cpu
     python inference.py --gpu 0 --enable_thinking    # 开启思考模式
@@ -39,7 +39,7 @@ def parse_args():
     parser.add_argument(
         "--model_path",
         type=str,
-        default="/data1/nuist_llm/TrainLLM/ModelCkpt/qwen3-06b",
+        default="/data1/nuist_llm/TrainLLM/ModelCkpt/qwen3-06b-base",
         help="Path to the pretrained model"
     )
     parser.add_argument(

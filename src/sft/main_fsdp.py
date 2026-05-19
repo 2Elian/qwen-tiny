@@ -37,6 +37,11 @@ def parse_args():
     parser.add_argument("--fsdp_mode", type=str, default="full_shard",
                         choices=["full_shard", "shard_grad_op", "hybrid_shard", "offload"],
                         help="FSDP sharding strategy")
+    # General data mixing
+    parser.add_argument("--general_data_path", type=str, default=None,
+                        help="Path to preprocessed general data (parquet/jsonl)")
+    parser.add_argument("--general_mix_ratio", type=float, default=0.2,
+                        help="Fraction of general data in training mix (0.0~1.0)")
     return parser.parse_args()
 
 
@@ -87,6 +92,8 @@ def main():
         val_split=data_cfg.get("val_split", 0.02),
         seed=cfg["training"].get("seed", 42),
         num_files=data_cfg.get("num_files"),
+        general_data_path=args.general_data_path or data_cfg.get("general_data_path"),
+        general_mix_ratio=args.general_mix_ratio if args.general_data_path else data_cfg.get("general_mix_ratio", 0.0),
     )
     print(f"[Data] train={len(train_dataset)}, val={len(val_dataset)}")
 

@@ -11,15 +11,17 @@ data:
   max_seq_length: 2048
   val_split: 0.02
   system_prompt: "You are a helpful math reasoning assistant. Think step by step before answering."
-  num_files: 2                # null = use all filtered files
+  num_files: null              # use all 10 filtered files (~28K samples)
+  general_data_path: null     # path to preprocessed general data (set to enable mixing)
+  general_mix_ratio: 0.2      # fraction of general data (0.0 ~ 1.0)
 
 training:
-  output_dir: "./output/deepmath-sft-zero3"
-  num_train_epochs: 15
+  output_dir: "./output/deepmath-sft-fsdp"
+  num_train_epochs: 1
   per_device_train_batch_size: 2
-  per_device_eval_batch_size: 2
+  per_device_eval_batch_size: 4
   gradient_accumulation_steps: 8    # effective batch = 4 * 8 = 32
-  learning_rate: 2.0e-5
+  learning_rate: 1.0e-5             # 0.6B model, lowered from 2e-5
   lr_scheduler_type: "cosine"
   warmup_ratio: 0.05
   weight_decay: 0.01
@@ -30,7 +32,7 @@ training:
   save_steps: 500
   eval_strategy: "steps"
   eval_steps: 500
-  save_total_limit: 3
+  save_total_limit: 5
   load_best_model_at_end: true
   metric_for_best_model: "eval_loss"
   report_to: "none"
